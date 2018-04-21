@@ -11,9 +11,36 @@ const url = require('url')
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
 
+// In main process.
+const { ipcMain } = require('electron')
+
+ipcMain.on('synchronous-message', (event, arg) => {
+  console.log(arg) // prints "ping"
+  event.returnValue = 'pong'
+})
+
+ipcMain.on('start-nightswatch', (event, arg) => {
+  console.log("Going to start-nightswatch again") // prints "ping"
+  console.log(arg)
+  
+  // Credit: https://stackoverflow.com/questions/9210542/node-js-require-cache-possible-to-invalidate
+  delete require.cache[require.resolve('./tasks.js')]
+  tasks=require('./tasks.js')
+  tasks.writeToOptionsDatabase();
+  event.returnValue = 'yo man! yo dude!'
+  
+  // require("./watchr");
+})
+
 function createWindow () {
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 800, height: 600})
+  mainWindow = new BrowserWindow({width: 800, height: 600,
+    webPreferences: {
+      'web-security': false,
+      nodeIntegration: false,
+      preload: path.join(__dirname, 'renderer.js')
+    }
+  })
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
@@ -23,7 +50,7 @@ function createWindow () {
   }))
 
   // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools()
 
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
